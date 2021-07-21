@@ -19,7 +19,8 @@ var SigninEvent = {
                         }else{
                             SigninEvent.setCookie('access_token', response.access_token, 1);
                             var access_token = SigninEvent.getCookie('access_token');
-
+                            var url = '/';
+                            location.href = url;
                             // $.ajax({
                             //     type : 'GET',
                             //     url : '/',
@@ -53,15 +54,28 @@ var SigninEvent = {
                             if (response.properties !== undefined){
                                 var param = {
                                     id: response.id,
-                                    nickname: response.properties.nickname,
-                                    kakao_account: response.kakao_account
+                                    name: response.properties.nickname,
+                                    email: response.email,
+                                    profile_image: response.properties.thumbnail_image
                                 }
-                                console.log(param);
-                                $.post('/user/sns/signin', param).done(function(response){
-                                    if (response.code === 200){
-                                        location.href = '/';
-                                    }
-                                })
+                                if (param.kakao_account === undefined || typeof param.kakao_account === 'undefined'){
+                                    alert('이메일은 필수정보입니다. 정보제공을 동의해주세요.');
+                                    Kakao.Auth.login({
+                                        scope: 'account_email',
+                                        success: function(response){
+                                            param.email = response.email;
+                                            $.post('/user/sns/signin', param).done(function(response){
+                                                if (response.code === 200){
+                                                    location.href = '/';
+                                                    console.log(param);
+                                                }
+                                            })
+                                        },
+                                        fail: function(error){
+                                            console.log(error);
+                                        }
+                                    })
+                                }
                             }else{
                                 alert('다시 시도해주세요.');
                             }
@@ -76,6 +90,34 @@ var SigninEvent = {
                 }
             })
         })
+    },
+    NaverSignin: function(){
+        window.addEventListener('load', function () {
+            naverLogin.getLoginStatus(function (status) {
+                if (status){
+                    var param = {
+                        email: naverLogin.user.email,
+                        name: naverLogin.user.name,
+                        profile_image: naverLogin.user.profile_image,
+                    }
+                    $('.btn-naver').on('click', function() {
+                        $.post('/user/sns/signin', param).done(function (response) {
+                            if (response.code === 200) {
+                                var url = '/';
+                                location.href = url;
+                            } else {
+                                alert('다시 시도해주세요.')
+                            }
+                        })
+                    })
+                    if(param.email === undefined || param.email == null) {
+                        alert('이메일은 필수정보입니다. 정보제공을 동의해주세요.');
+                        naverLogin.reprompt();
+                        return;
+                    }
+                }
+            });
+        });
     },
     setCookie(name, value, days){
         var expireDate = new Date();
@@ -100,3 +142,4 @@ var SigninEvent = {
 }
 SigninEvent.signIn();
 SigninEvent.kakaoSignIn();
+SigninEvent.NaverSignin();
