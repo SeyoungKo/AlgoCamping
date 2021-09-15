@@ -46,8 +46,6 @@ wheels/
 pip-wheel-metadata/
 share/python-wheels/
 
-camping_server1/.idea/
+data.ini
 
-camping_server1/data.ini
-
-datasweight_dict.txt
+.idea/

@@ -1,48 +1,23 @@
 from flask import *
 from app.main.service import user
-from functools import wraps
 from flask import Blueprint
 param = {}
 
 route_api = Blueprint('main', __name__)
 
-# Authorization header token 체크
-# def signin_required(f):
-#     @wraps(f)
-#     def decorated_function(*args, **kwargs):
-#         access_token = request.headers.get("Authorization")
-#         if access_token is not None:
-#             try:
-#                 param = request.args.to_dict()
-#             except:
-#                 param = None
-#         else:
-#             return Response(status=401)
-#
-#         print(f'login_required : {param}')
-#         return f(*args, **kwargs)
-#
-#     return decorated_function
-
 @route_api.route('/')
 @route_api.route('/main')
-# @signin_required
 def main_page():
     param = {}
     if user.is_signin():
-        param["name"] = session["name"]
-        return render_template("index.html", param=param)
-    else:
-        return render_template('index.html')
-    # param = request.args.to_dict()
-    # print(f'main page : {param}')
-    # return render_template('index.html')
+        param['name'] = user.is_signin()['name']
+    return render_template("index.html", param=param)
 
 @route_api.route('/detail')
 def detail():
     param = {}
     if user.is_signin():
-        param["name"] = session["name"]
+        param['name'] = user.is_signin()['name']
     return render_template('detail.html', param=param)
 
 @route_api.route('/signin')
@@ -51,11 +26,34 @@ def signin():
 
 @route_api.route('/signup')
 def signup():
-    return render_template('signup.html')
+    return render_template('join/signup.html')
+
+@route_api.route('/signup/survey/first')
+def survey_first():
+    return render_template('join/survey1.html')
+
+@route_api.route('/signup/survey/second')
+def survey_second():
+    return render_template('join/survey2.html')
+
+@route_api.route('/signup/survey/third')
+def survey_third():
+    return render_template('join/survey3.html')
+
+@route_api.route('/signup/survey/fourth')
+def survey_fourth():
+    return render_template('join/survey4.html')
+
+@route_api.route('/signup/survey/fifth')
+def survey_fifth():
+    return render_template('join/survey5.html')
+
+@route_api.route('/signup/survey/sixth')
+def survey_sixth():
+    return render_template('join/survey6.html')
 
 @route_api.route('/search')
 def search():
-    param = {}
     if user.is_signin():
-        param["name"] = session["name"]
+        param['name'] = user.is_signin()['name']
     return render_template('searchlist.html', param=param)
