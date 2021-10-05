@@ -8,6 +8,7 @@ from app.config import Config
 from ..service.tag_points import TagPoints
 import datetime
 import pandas as pd
+import logging
 
 # 검색결과 리스트
 def get_searchlist(params):
@@ -23,7 +24,7 @@ def get_searchlist(params):
     # 입력 데이터 태그/캠핑장 구분
     for i, param in enumerate(split_params):
         if i == 0:
-            if split_params[0] == '전체':
+            if split_params[0] == '지역':
                 continue
             else:
                 area = '%{}%'.format(split_params[0].replace(' ', ''))
@@ -94,6 +95,7 @@ def get_searchlist(params):
     place_dto.place = place_info
     modeling_dto.modeling = {'algo_stars': algo_stars, 'tags': tags}
 
+    logging.info('----[' + str(datetime.datetime.now()) + ' get_searchlist() : 200]----')
     params['code'] = 200
     params['keywords'] = ', '.join(split_params)
     params['res_num'] = len(main_query)
@@ -194,7 +196,7 @@ def get_algo_points(content_id):
         algo_star = round(sum(cat_points_list) / 100, 1)
     except:
         # content_id에 대한 별점, 점수 산출 불가인 경우
-        return '', []
+        return 0.0, []
     return algo_star, cat_points_list
 
 # top3,5 특성
@@ -221,6 +223,8 @@ def make_resobj(place_info):
         param_list.append(param)
         stars.append(param['star'])
         tags.append(param['tag'])
+
+    logging.info('----[' + str(datetime.datetime.now()) + ' make_resobj() : 200]----')
 
     params['code'] = 200
     params['place_info'] = param_list

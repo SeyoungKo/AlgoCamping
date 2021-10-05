@@ -1,11 +1,16 @@
 const MAX_TAG = 3;
+var params = {
+    keywords : '',
+    res_num : '',
+    place_info : '',
+}
 
 var SearchList = {
     // 검색결과 정렬
     sortList: function(){
         // 인기순
         $('#btnradio-popular').click(function() {
-            $.getJSON('/search/popular').done(function(response){
+            $.getJSON('/search/popular', params).done(function(response){
                 if(response.code === 200){
                     SearchList.getSearchData(response);
                 }else{
@@ -14,7 +19,7 @@ var SearchList = {
         });
         // 등록순
         $('#btnradio-update').click(function() {
-                $.getJSON('/search/recent').done(function (response) {
+                $.getJSON('/search/recent', params).done(function (response) {
                     if(response.code === 200){
                         SearchList.getSearchData(response);
                     }else{
@@ -25,7 +30,7 @@ var SearchList = {
         });
         // 조회순
         $('#btnradio-readcount').click(function() {
-            $.getJSON('/search/readcount').done(function(response){
+            $.getJSON('/search/readcount', params).done(function(response){
                 if(response.code === 200){
                     SearchList.getSearchData(response);
                 }else{
@@ -38,14 +43,11 @@ var SearchList = {
     getList: function(){
         var param = document.location.href.split("?keywords=");
         var decode_param = decodeURI(decodeURIComponent(param[1].toString()));
-        var req_param = decode_param.replaceAll('%3B', ';');
-        var params = {
-            keywords : req_param,
-            res_num : '',
-            place_info : '',
-        }
+        var req_param = decode_param.replaceAll('%3B', ';').replace('추천태그', '');
+        params.keywords = req_param;
+
         var access_token = SearchList.getCookie('access_token');
-        console.log(params)
+
         $.getJSON('/search/list', params).done(function(response){
             if(response.code === 200){
                 SearchList.getSearchData(response);
@@ -72,13 +74,23 @@ var SearchList = {
         }
     },
     showSearchList: function(res){
-        $('.input-keyword').text(res.keywords);
+        var rtn_keywords = '';
+        rtn_keywords = res.keywords;
+
+        try{
+            $('#area-default-menu').text(rtn_keywords.substr(0, 2));
+            $("#area-default-menu").val(rtn_keywords.substr(0, 2));
+        } catch(err){
+
+        }
+
+        $('.input-keyword').text(rtn_keywords);
         $('.input-size').text(res.res_num);
         $('.search-result').css({'visibility': 'visible'});
 
         for(var i=0; i<res.place_info.length; i++){
             $('#card-layout').append(
-                '<div class="col" style="cursor: pointer;">\n' +
+                '<div class="col" style="cursor: pointer;" id=' + '"' + i + '"' + '>\n' +
                     '<div class="card border-0">\n' +
                         '<div class="swiper-container card mySwiper">\n' +
                             '<div class="swiper-wrapper" id="swiper'+ (i+1) + '">\n' +
@@ -128,13 +140,16 @@ var SearchList = {
         // 장소 클릭
         $('.col').each(function(idx){
             $(this).click(function(event){
+                var idx = $(this).attr('id');
+                var id = res.place_info[idx].content_id;
+
                 event.preventDefault();
-                var id = res.place_info[Number(idx / 2)].content_id;
                 var param = {
-                    content_id: id
+                    content_id : id,
+                    id : idx
                 }
-                var url = '/detail?content_id=';
-                location.href = url + encodeURI(encodeURIComponent(param.content_id));
+
+                location.href = '/detail/' + param.content_id + '/' + param.id;
             })
         })
     },

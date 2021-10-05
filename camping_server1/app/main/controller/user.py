@@ -1,5 +1,6 @@
 from app.main.service import user as user_service
 from app.main.util.user_dto import UserDTO as user_dto
+from app.main.service import main as main_service
 from flask_restx import Resource, Namespace, fields
 from flask import jsonify, request, session, redirect
 from flask import Blueprint
@@ -86,12 +87,17 @@ class UserSignup(Resource):
         return user_service.signup(values)
 
 @user.route('/signup/survey', methods=['GET'])
+@user.doc(params={'userId': '유저 고유 아이디', 'firstAnswer': 'q1에 대한 답', 'secondAnswer': 'q2에 대한 답', 'secondSubAnswer': 'q2-1에 대한 답',
+                  'thirdAnswer': 'q3에 대한 답', 'fourthAnswer': 'q4에 대한 답', 'fourthSubAnswer': 'q4-1에 대한 답',
+                  'fifthAnswer': 'q5에 대한 답', 'sixthAnswer': 'q6에 대한 답'})
+@user.doc(response={400: 'Validation Error', 500: 'Database Server Error'})
+@user.response(200, 'Success')
 class UserSurvey(Resource):
     def get(self):
         """회원가입 설문"""
         param = request.args.to_dict()
-        print(param)
-        return {'code': 200}
+        return user_service.signup_survey(param)
+
 
 @user.route('/signin', methods=['POST'])
 class UserSignin(Resource):
@@ -103,7 +109,18 @@ class UserSignin(Resource):
     def post(self):
         """로그인"""
         values = dict(request.values)
-        return user_service.signin(values)
+        param = user_service.signin(values)
+
+        headers = str(request.headers)
+        base_url = request.base_url
+        screen = request.path
+        method = request.method
+        action = 'click'
+        type = 'button'
+        keyword = []
+
+        main_service.user_event_logging(headers, base_url, screen, method, action, type, keyword) if param['code'] == 200 else param
+        return param
 
 
 @user.route('/detail', methods=['POST'])
@@ -123,7 +140,6 @@ class UserSNSSignin(Resource):
         """플랫폼 로그인 - 추후 변경 예정인 API입니다."""
         values = dict(request.values)
         name = values['name']
-        print()
         try:
             platform = 'kakao'
             id = values['id']  # 고유 아이디
@@ -141,8 +157,19 @@ class UserSNSSignin(Resource):
 def signout():
     """사용자 로그아웃"""
     # getter
-    param = user_dto.user
-    user_service.delete_token(param['name'])
+    user_param = user_dto.user
+
+    headers = str(request.headers)
+    base_url = request.base_url
+    screen = request.path
+    method = request.method
+    action = 'click'
+    type = 'button'
+    keyword = []
+
+    main_service.user_event_logging(headers, base_url, screen, method, action, type, keyword)
+    user_service.delete_token(user_param['name'])
+
     return redirect(request.host_url, code=302)
 
 

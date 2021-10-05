@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from flask import *
 from app.config import Config
 import datetime
+import logging
 
 # 상세 정보
 def get_detail(param):
@@ -42,6 +43,8 @@ def get_detail(param):
                 # future_date, future_congestion = json_default(future_congestion_obj)
 
                 params['place_info'] = place_info[0]
+                params['place_info'].detail_image = str(place_info[0].detail_image).split(',')[:5]
+
                 params['avg_star'] = avg_star
                 params['local_info'] = local_obj if local_obj is not None else None
 
@@ -56,8 +59,11 @@ def get_detail(param):
                     params['user_name'] = session['name']
                 except KeyError:
                     params['user_name'] = '사용자'
+
+            logging.info('----[' + str(datetime.datetime.now()) + ' get_detail() : 200]----')
             params['code'] = 200
         except:
+            logging.error('----[' + str(datetime.datetime.now()) + ' get_detail() : 500]----')
             params['code'] = 500
         finally:
             session_.close()

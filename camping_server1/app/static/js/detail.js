@@ -1,20 +1,20 @@
 var DetailInfo = {
     getPlaceInfo: function(){
-        var param = document.location.href.split("?content_id=");
-        var decode_param = decodeURI(decodeURIComponent(param[1].toString()));
+        var p_content_id = document.location.href.split("/")[4].toString();
+        var p_id = document.location.href.split("/")[5].toString();
         var param = {
-            content_id: decode_param
+            content_id: p_content_id,
+            id: p_id
         }
         var access_token = DetailInfo.getCookie('access_token');
 
-            $.getJSON('/detail/info', param).done(function(response){
-                if (response.code === 200){
-                    DetailInfo.doAfterSuccess(response);
-                }else{
-                    alert(response.msg);
-                }
-            })
-        // }
+        $.getJSON('/detail/info', param).done(function(response){
+            if (response.code === 200){
+                DetailInfo.doAfterSuccess(response);
+            }else{
+                alert(response.msg);
+            }
+        })
     },
     showPlaceInfo: function(res){
         var star = '';
@@ -57,12 +57,11 @@ var DetailInfo = {
                 '</div>\n'
             )
         }else{
-            var img_array = res.place_info.detail_image.split(',');
             $('#swiper-place').empty();
-            for(var i=0; i< img_array.length; i++){
+            for(var i=0; i< res.place_info.detail_image.length; i++){
                 $('.swiper-wrapper').append(
                     '<div class="swiper-slide">\n' +
-                            '<img src="' + img_array[i] + '" class="figure-img img-fluid rounded" onError="this.onerror=null;this.src=\'/static/imgs/algo_default.png\';" alt="...">\n' +
+                            '<img src="' + res.place_info.detail_image[i] + '" class="figure-img img-fluid rounded" onError="this.onerror=null;this.src=\'/static/imgs/algo_default.png\';" alt="...">\n' +
                     '</div>\n'
                 )
             }

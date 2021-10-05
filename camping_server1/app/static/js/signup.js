@@ -1,10 +1,13 @@
 var answerParam = {
+        userId: '',
         firstAnswer: '',
         secondAnswer: '',
         secondSubAnswer: '',
         thirdAnswer: '',
         fourthAnswer: '',
-        fifthAnswer: ''
+        fourthSubAnswer: '',
+        fifthAnswer: '',
+        sixthAnswer: ''
 }
 
 var getQueryString = function(key){
@@ -43,6 +46,17 @@ var getQueryString = function(key){
 }
 
 var SignupEvent = {
+    verifyEmail: function(){
+        var emailVal = $('#email-form').val();
+        var regExp = /^[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*.[a-zA-Z]{2,3}$/i;
+
+        if (emailVal.match(regExp) === null){
+            alert('이메일 형식에 맞게 작성해주세요.');
+            return false;
+        }else{
+            return true;
+        }
+    },
     checkEmail: function(){
         $('#check-btn').on('click', function(){
             var param = {
@@ -50,6 +64,9 @@ var SignupEvent = {
                 flag : ''
             }
             $.post('/user/check', param).done(function(response){
+                if (SignupEvent.verifyEmail() === false){
+                    return;
+                }
                 if (response.code === 200){
                     if (response.flag === false){
                         alert('사용 가능한 이메일입니다.');
@@ -76,22 +93,32 @@ var SignupEvent = {
                 password : $('#password-form').val(),
                 passwordConfirm : $('#password-check-form').val(),
                 name : $('#name-form').val(),
-                nickname : $('#nickname-form').val()
+                nickname : $('#nickname-form').val(),
+                birthDate : $('#input-year').val().toString().substring(1, 3) + $('#input-month').val().toString() + $('#input-day').val().toString()
             }
             if (param.email === ''){
                 alert('이메일을 입력해주세요.');
+                return
+            }else{
+                if (SignupEvent.verifyEmail() === false){
+                    return
+                }
             }
             if (param.password === ''){
                 alert('패스워드를 입력해주세요.');
+                return
             }
             if (param.passwordConfirm === ''){
                 alert('패스워드 확인을 입력해주세요.');
+                return
             }
             if (param.name === ''){
                 alert('이름을 입력해주세요.');
+                return
             }
             if (param.nickname === ''){
                 alert('닉네임을 입력해주세요.');
+                return
             }
             if (param.password !== '' && param.name !== '' && param.email !== ''){
                 if ($('#check-btn').is(':disabled')){
@@ -131,7 +158,7 @@ var SignupEvent = {
                 $(this).css('backgroundColor', '#b5b5b5');
                 $(this).css('color', '#393939');
                 $('.btn-survey1').not(this).prop('disabled', true);
-                first_answer = $(this).text();
+                first_answer = $(this).attr('id');
            }
         })
         $('.btn-survey1-next').on('click', function(){
@@ -140,7 +167,7 @@ var SignupEvent = {
                 return
             }else{
                 answerParam.firstAnswer = first_answer;
-                location.href = '/signup/survey/second?id=' + id + '&q1=' + encodeURI(encodeURIComponent(answerParam.firstAnswer));
+                location.href = '/signup/survey/second?id=' + id + '&q1=' + answerParam.firstAnswer.toString().split('-')[1];
             }
         }),
         $('.btn-survey1-prev').on('click', function(){
@@ -163,7 +190,7 @@ var SignupEvent = {
                 $(this).css('backgroundColor', '#b5b5b5');
                 $(this).css('color', '#393939');
                 $('.btn-survey2').not(this).prop('disabled', true);
-                second_answer = $(this).text();
+                second_answer = $(this).attr('id');
            }
         }),
         $('.btn-survey2-1').bind('click', function(){
@@ -176,7 +203,7 @@ var SignupEvent = {
                 $(this).css('backgroundColor', '#b5b5b5');
                 $(this).css('color', '#393939');
                 $('.btn-survey2-1').not(this).prop('disabled', true);
-                second_sub_answer = $(this).text();
+                second_sub_answer = $(this).attr('id');
            }
         }),
         $('.btn-survey2-next').on('click', function(){
@@ -184,12 +211,12 @@ var SignupEvent = {
                 alert('설문에 대한 응답을 선택해주세요.');
                 return
             }else{
-                location.href = '/signup/survey/third?id=' + id + '&q1=' + encodeURI(encodeURIComponent(getQueryString('q1'))) + '&q2=' + encodeURI(encodeURIComponent(second_answer)) +
-                '&q2sub=' + encodeURI(encodeURIComponent(second_sub_answer));
+                location.href = '/signup/survey/third?id=' + id + '&q1=' + getQueryString('q1') + '&q2=' + second_answer.toString().split('-')[1] +
+                '&q2sub=' + second_sub_answer.toString().split('-')[1];
             }
         }),
         $('.btn-survey2-prev').on('click', function(){
-            location.href = '/signup/survey/first?id=' + id + '&q1=' + encodeURI(encodeURIComponent(getQueryString('q1')));
+            location.href = '/signup/survey/first?id=' + id + '&q1=' + getQueryString('q1');
         })
     },
     surveyThird: function(){
@@ -197,17 +224,6 @@ var SignupEvent = {
         var id = getQueryString('id');
 
         $('.user-nickname').text(getCookie(id));
-        // input form 포커스 여부 감지
-        $('.etc-form').focus(function(){
-            $('.btn-survey3').css('backgroundColor', '#dbdbdb');
-            $('.btn-survey3').css('color', '#707070');
-            $('.btn-survey3').not(this).prop('disabled', false);
-            // // 강제 엔터키
-            //  var e = jQuery.Event( "keydown", { keyCode: 13 } );
-            //  $(this).trigger( e );
-            third_answer = $('.etc-form').val();
-        })
-        // $('.etc-form').blur();
         $('.btn-survey3').bind('click', function(){
            if ($('.btn-survey3').not(this).prop('disabled') === true){
                 $(this).css('backgroundColor', '#dbdbdb');
@@ -219,132 +235,189 @@ var SignupEvent = {
                 $(this).css('backgroundColor', '#b5b5b5');
                 $(this).css('color', '#393939');
                 $('.btn-survey3').not(this).prop('disabled', true);
-                third_answer = $(this).text();
-                $('.etc-form').val('');
+                third_answer = $(this).attr('id');
            }
         }),
         $('.btn-survey3-next').on('click', function(){
-            if (third_answer === '' && $('.etc-form').val() === ''){
+            if (third_answer === ''){
                 alert('설문에 대한 응답을 선택해주세요.');
                 return
             }else{
-                location.href = '/signup/survey/fourth?id=' + id + '&q1=' + encodeURI(encodeURIComponent(getQueryString('q1'))) + '&q2=' + encodeURI(encodeURIComponent(getQueryString('q2'))) +
-                '&q2sub=' + encodeURI(encodeURIComponent(getQueryString('q2sub'))) + '&q3=' + encodeURI(encodeURIComponent(third_answer));
+                location.href = '/signup/survey/fourth?id=' + id + '&q1=' + getQueryString('q1') + '&q2=' + getQueryString('q2') +
+                '&q2sub=' + getQueryString('q2sub') + '&q3=' + third_answer.toString().split('-')[1];
             }
         }),
         $('.btn-survey3-prev').on('click', function(){
-            location.href = '/signup/survey/second?id=' + id + '&q1=' + encodeURI(encodeURIComponent(getQueryString('q1'))) + '&q2=' + encodeURI(encodeURIComponent(getQueryString('q2'))) + '&q2sub='
-            + encodeURI(encodeURIComponent(getQueryString('q2sub')));
+            location.href = '/signup/survey/second?id=' + id + '&q1=' + getQueryString('q1') + '&q2=' + getQueryString('q2') + '&q2sub='
+            + getQueryString('q2sub');
         })
     },
     surveyFourth: function(){
         var fourth_answer = '';
+        var fourth_sub_answer = '';
         var id = getQueryString('id');
 
         $('.user-nickname').text(getCookie(id));
-        $('.btn-survey4').bind('click', function(){
-           if ($('.btn-survey4').not(this).prop('disabled') === true){
+        $('.btn-survey4-1').bind('click', function(){
+           if ($('.btn-survey4-1').not(this).prop('disabled') === true){
                 $(this).css('backgroundColor', '#dbdbdb');
                 $(this).css('color', '#707070');
-                $('.btn-survey4').not(this).prop('disabled', false);
+                $('.btn-survey4-1').not(this).prop('disabled', false);
                 fourth_answer = '';
            }else{
                 $(this).css('backgroundColor', '#b5b5b5');
                 $(this).css('color', '#393939');
-                $('.btn-survey4').not(this).prop('disabled', true);
-                fourth_answer = $(this).text();
+                $('.btn-survey4-1').not(this).prop('disabled', true);
+                fourth_answer = $(this).attr('id');
+           }
+        }),
+        $('.btn-survey4-2').bind('click', function(){
+           if ($('.btn-survey4-2').not(this).prop('disabled') === true){
+                $(this).css('backgroundColor', '#dbdbdb');
+                $(this).css('color', '#707070');
+                $('.btn-survey4-2').not(this).prop('disabled', false);
+                fourth_sub_answer = '';
+           }else{
+                $(this).css('backgroundColor', '#b5b5b5');
+                $(this).css('color', '#393939');
+                $('.btn-survey4-2').not(this).prop('disabled', true);
+                fourth_sub_answer = $(this).attr('id');
            }
         }),
         $('.btn-survey4-next').on('click', function(){
-            if (fourth_answer === ''){
+            if (fourth_answer === '' || fourth_sub_answer === ''){
                 alert('설문에 대한 응답을 선택해주세요.');
                 return
             }else{
-                location.href = '/signup/survey/fifth?id=' + id + '&q1=' + encodeURI(encodeURIComponent(getQueryString('q1'))) + '&q2=' + encodeURI(encodeURIComponent(getQueryString('q2'))) +
-                '&q2sub=' + encodeURI(encodeURIComponent(getQueryString('q2sub'))) + '&q3=' + encodeURI(encodeURIComponent(getQueryString('q3'))) +
-                '&q4=' + encodeURI(encodeURIComponent(fourth_answer));
+                location.href = '/signup/survey/fifth?id=' + id + '&q1=' + getQueryString('q1') + '&q2=' + getQueryString('q2') +
+                '&q2sub=' + getQueryString('q2sub') + '&q3=' + getQueryString('q3') +
+                '&q4=' + fourth_answer.toString().split('-')[1] + '&q4sub=' + fourth_sub_answer.toString().split('-')[1];
             }
         }),
         $('.btn-survey4-prev').on('click', function(){
-            location.href = '/signup/survey/third?id=' + id + '&q1=' + encodeURI(encodeURIComponent(getQueryString('q1'))) + '&q2=' + encodeURI(encodeURIComponent(getQueryString('q2'))) + '&q2sub=' +
-            encodeURI(encodeURIComponent(getQueryString('q2sub'))) + '&q3=' + encodeURI(encodeURIComponent(getQueryString('q3')));
+            location.href = '/signup/survey/third?id=' + id + '&q1=' + getQueryString('q1') + '&q2=' + getQueryString('q2') + '&q2sub=' +
+            getQueryString('q2sub') + '&q3=' + getQueryString('q3');
         })
     },
-    surveyFifth: function(){
+    surveyFifth: function() {
         var fifth_answer = '';
         var id = getQueryString('id');
 
         $('.user-nickname').text(getCookie(id));
-        $('.btn-survey5').bind('click', function(){
-           if ($('.btn-survey5').not(this).prop('disabled') === true){
+        $('.btn-survey5').bind('click', function () {
+            if ($('.btn-survey5').not(this).prop('disabled') === true) {
                 $(this).css('backgroundColor', '#dbdbdb');
                 $(this).css('color', '#707070');
                 $('.btn-survey5').not(this).prop('disabled', false);
                 fifth_answer = '';
-           }else{
+            } else {
                 $(this).css('backgroundColor', '#b5b5b5');
                 $(this).css('color', '#393939');
                 $('.btn-survey5').not(this).prop('disabled', true);
-                fifth_answer = $(this).text();
-           }
+                fifth_answer = $(this).attr('id');
+            }
         }),
-        $('.btn-survey5-next').on('click', function(){
-            if (fifth_answer === ''){
+        $('.btn-survey5-next').on('click', function () {
+            if (fifth_answer === '') {
+                alert('설문에 대한 응답을 선택해주세요.');
+                return
+            } else {
+                location.href = '/signup/survey/sixth?id=' + id + '&q1=' + getQueryString('q1') + '&q2=' + getQueryString('q2') +
+                    '&q2sub=' + getQueryString('q2sub') + '&q3=' + getQueryString('q3') +
+                    '&q4=' + getQueryString('q4') + '&q4sub=' + getQueryString('q4sub') + '&q5=' + fifth_answer.toString().split('-')[1];
+            }
+        }),
+        $('.btn-survey5-prev').on('click', function () {
+            location.href = '/signup/survey/fourth?id=' + id + '&q1=' + getQueryString('q1') + '&q2=' + getQueryString('q2') + '&q2sub=' +
+                getQueryString('q2sub') + '&q3=' + getQueryString('q3') + '&q4=' + getQueryString('q4') + '&q4sub=' + getQueryString('q4sub');
+        })
+    },
+    surveySixth: function(){
+        var sixth_answer = '';
+        var id = getQueryString('id');
+
+        $('.user-nickname').text(getCookie(id));
+        $('.btn-survey6').bind('click', function(){
+            if ($('.btn-survey6').not(this).prop('disabled') === true){
+                $(this).css('backgroundColor', '#dbdbdb');
+                $(this).css('color', '#707070');
+                $('.btn-survey6').not(this).prop('disabled', false);
+                sixth_answer = '';
+            }else{
+                $(this).css('backgroundColor', '#b5b5b5');
+                $(this).css('color', '#393939');
+                $('.btn-survey6').not(this).prop('disabled', true);
+                sixth_answer = $(this).attr('id');
+            }
+        }),
+        $('.btn-survey6-next').on('click', function(){
+            if (sixth_answer === ''){
                 alert('설문에 대한 응답을 선택해주세요.');
                 return
             }else{
-                answerParam.firstAnswer = getQueryString('q1')
-                answerParam.secondAnswer = getQueryString('q2')
-                answerParam.secondSubAnswer = getQueryString('q2sub')
-                answerParam.thirdAnswer = getQueryString('q3')
-                answerParam.fourthAnswer = getQueryString('q4')
-                answerParam.fifthAnswer = fifth_answer
+                answerParam.firstAnswer = getQueryString('q1');
+                answerParam.secondAnswer = getQueryString('q2');
+                answerParam.secondSubAnswer = getQueryString('q2sub');
+                answerParam.thirdAnswer = getQueryString('q3');
+                answerParam.fourthAnswer = getQueryString('q4');
+                answerParam.fourthSubAnswer = getQueryString('q4sub');
+                answerParam.fifthAnswer = getQueryString('q5');
+                answerParam.sixthAnswer = sixth_answer.toString().split('-')[1];
+                answerParam.userId = id;
 
                 // 설문 결과 전달
                 $.getJSON('/user/signup/survey', answerParam).done(function(response){
+                    if (id === '' || getQueryString('q1') === '' || getQueryString('q2') === '' || getQueryString('q2sub') === '' ||
+                    getQueryString('q3') === '' || getQueryString('q4') === '' || getQueryString('q4sub') === '' || getQueryString('q5') === ''){
+                        alert('비정상적인 접근입니다.');
+                        // document.location.reload(true);
+                        // document.location.href = '/signup';
+                        // document.location.replace = '/signup';
+                        return;
+                    }
                     if(response.code === 200){
-                        location.href = '/signup/survey/sixth?id=' + id;
+                        location.href = '/signup/survey/done?id=' + id;
                     }else{
-                        alert(response.msg);
+                        alert('다시 시도해주세요.');
                     }
                 })
             }
         }),
-        $('.btn-survey5-prev').on('click', function(){
-            location.href = '/signup/survey/fourth?id=' + id + '&q1=' + encodeURI(encodeURIComponent(getQueryString('q1'))) + '&q2=' + encodeURI(encodeURIComponent(getQueryString('q2'))) +
-            '&q2sub=' + encodeURI(encodeURIComponent(getQueryString('q2sub'))) + '&q3=' + encodeURI(encodeURIComponent(getQueryString('q3'))) +
-            '&q4=' + encodeURI(encodeURIComponent(getQueryString('q4')));
+        $('.btn-survey6-prev').on('click', function(){
+            location.href = '/signup/survey/fifth?id=' + id + '&q1=' + getQueryString('q1') + '&q2=' + getQueryString('q2') +
+            '&q2sub=' + getQueryString('q2sub') + '&q3=' + getQueryString('q3') +
+            '&q4=' + getQueryString('q4') + '&q4sub=' + getQueryString('q4sub');
         })
     },
-    surveySixth: function(){
+    surveyDone: function(){
         var id = getQueryString('id');
-
+        // if (id === '' || getQueryString('q1') === '' || getQueryString('q2') === '' || getQueryString('q2sub') === '' ||
+        //             getQueryString('q3') === '' || getQueryString('q4') === '' || getQueryString('q4sub') === '' || getQueryString('q5') === ''){
+        //     window.alert('비정상적인 접근입니다.');
+        //     window.location.href = '/signup';
+        //     continue
+        // }
         $('.user-nickname').text(getCookie(id));
+        delCookie(id);
         $('.btn-main-router').on('click', function(){
             location.href = '/';
         })
     }
 }
 var setCookie = function(name, value, days){
-    var expireDate = new Date();
-    expireDate.setDate(expireDate.getDate() + days);
-
-    var cookie_value = escape(value) + ((days == null) ? '' : '; expires=' + expireDate.toUTCString());
-    document.cookie = name + '=' + cookie_value;
+  var date = new Date();
+  date.setTime(date.getTime() + days*24*60*60*1000);
+  document.cookie = name + '=' + value + ';expires=' + date.toUTCString() + ';path=/';
 }
 
 var getCookie = function(name){
-    var x, y;
-    var val = document.cookie.split(';');
+    var value = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return value? value[2] : null;
+}
 
-    for (var i = 0; i < val.length; i++) {
-        x = val[i].substr(0, val[i].indexOf('='));
-        y = val[i].substr(val[i].indexOf('=') + 1);
-        x = x.replace(/^\s+|\s+$/g, ''); // 앞과 뒤의 공백 제거하기
-        if (x == name) {
-          return unescape(y); // unescape로 디코딩 후 값 리턴
-        }
-    }
+var delCookie = function(name){
+    document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    console.log('delCookie is called!');
 }
 
 SignupEvent.signUp();
@@ -355,3 +428,4 @@ SignupEvent.surveyThird();
 SignupEvent.surveyFourth();
 SignupEvent.surveyFifth();
 SignupEvent.surveySixth();
+SignupEvent.surveyDone();
