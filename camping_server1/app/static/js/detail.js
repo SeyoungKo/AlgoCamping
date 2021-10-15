@@ -1,24 +1,64 @@
+var param = {
+    content_id: '',
+    id: '',
+    access_token: '',
+    status: 0
+}
+var like_list = [];
+
+$('#empty-like').click(function(){
+    param.status = 1; // like
+    like_list.push(param.content_id);
+
+    $.post('/user/like/update', param).done(function(response){
+        if (response.code === 200){
+            $('#empty-like').css({'display': 'none'});
+            $('#nonempty-like').css('display', '');
+        }else{
+            alert('다시 시도해주세요.');
+        }
+    })
+})
+
+$('#nonempty-like').click(function(){
+    param.status = 0 // dislike
+
+    // content_id dislike (splice)
+    var index = like_list.indexOf(param.content_id);
+    if (index !== -1){
+        like_list.splice(index, 1);
+    }
+
+    $.post('/user/like/update', param).done(function(response){
+        if (response.code === 200){
+            $('#nonempty-like').css({'display': 'none'});
+            $('#empty-like').css('display', '');
+        }else{
+            alert('다시 시도해주세요.');
+        }
+    })
+})
+
 var DetailInfo = {
     getPlaceInfo: function(){
         var p_content_id = document.location.href.split("/")[4].toString();
         var p_id = document.location.href.split("/")[5].toString();
-        var param = {
-            content_id: p_content_id,
-            id: p_id
-        }
         var access_token = DetailInfo.getCookie('access_token');
+
+        param.content_id = p_content_id;
+        param.id = p_id;
+        param.access_token = access_token;
 
         $.getJSON('/detail/info', param).done(function(response){
             if (response.code === 200){
                 DetailInfo.doAfterSuccess(response);
             }else{
-                alert(response.msg);
+                alert(response.code);
             }
         })
     },
     showPlaceInfo: function(res){
         var star = '';
-
         if (res.avg_star === 0){
             $('.visitor-text').css({'visibility': 'hidden'});
         }
@@ -76,6 +116,24 @@ var DetailInfo = {
                 loadPrevNextAmount: 1,  // 미리 로드할 이미지 개수
             },
         });
+    },
+    showLikeIcon: function(res){
+
+        if (res.like === 'None'){
+            $('#nonempty-like').css({'display': 'none'});
+        }else{
+            var like = res.like.split(',');
+            for (var i=0; i<like.length; i++){
+                like_list.push(like[i]);
+            }
+
+            // content_id가 포함되어 있는지 확인
+            if (like_list.includes(param.content_id.toString())){
+                $('#empty-like').css({'display': 'none'});
+            }else{
+                $('#nonempty-like').css({'display': 'none'});
+            }
+        }
     },
     showMap: function(res){
         $('.kakao-map').append(
@@ -142,6 +200,9 @@ var DetailInfo = {
         }
 
         if(DetailInfo.getCookie('access_token') === undefined){
+            $('#nonempty-like').css({'display': 'none'});
+            $('#empty-like').css({'display': 'none'});
+
             var title = res.place_info.place_name + '에 대한 분석결과입니다.';
             var subtitle = '로그인을 통해 내 캠핑장 선호도를 파악하고 나와 캠핑장 매칭도를 확인해보세요.';
         }else{
@@ -202,12 +263,12 @@ var DetailInfo = {
                 data: res.algo_score,
                 pointPlacement: 'on',
                 color: '#4f9f88'
+            },
+            {
+              name: '사용자',
+              data: [80, 90, 100, 100, 90],
+              pointPlacement: 'on'
             }],
-            //{
-            //   name: '사용자',
-            //   data: [50000, 39000, 42000, 31000, 26000],
-            //   pointPlacement: 'on'
-            // }],
 
             responsive: {
               rules: [{
@@ -266,9 +327,14 @@ var DetailInfo = {
             }
           },
           legend: {
-            layout: 'vertical',
-            align: 'right',
-            verticalAlign: 'middle'
+            // layout: 'vertical',
+            // align: 'bottom',
+            // verticalAlign: 'middle'
+               layout: 'vertical',
+               align: 'center',
+               verticalAlign: 'bottom',
+               itemMarginTop: 10,
+               itemMarginBottom: 10
           },
           plotOptions: {
             series: [{
@@ -367,12 +433,12 @@ var DetailInfo = {
         $('.mySwiper2').append(
             '<div class="col">\n' +
                 '<span>\n' +
-                    '<h5 class="text-center"><span class="h5 user-name"></span>' + '님 ' + '\n' +
+                    '<br><h5 class="text-center"><span class="h5 user-name"></span>' + '님 ' + '\n' +
                         '<span class="h5 fw-bold festival-addr" style="color: #49917D">' + res.place_info.addr.split(' ')[1] + '</span> 인근 축제/관광지는 어떠세요?\n' +
                     '</h5>\n' +
                 '</span>\n' +
             '</div>\n' +
-            '<div class="swiper-wrapper" id="swiper-local">\n' +
+            '<div class="swiper-wrapper swiper-wrapper2" id="swiper-local">\n' +
             '</div>'
         );
         // 사용자 이름 노출
@@ -391,7 +457,7 @@ var DetailInfo = {
                     res.local_info[i].line_intro = ' ';
                 }
                 $('#swiper-local').append(
-                    '<div class="swiper-slide">\n' +
+                    '<div class="swiper-slide swiper-slide2">\n' +
                         '<div class="h5 fw-bold local-title">' + res.local_info[i].place_name + '\n' +
                             '<span class="text-muted fw-normal small">'+ res.local_info[i].addr + '</span>\n' +
                         '</div>\n' +
@@ -403,6 +469,7 @@ var DetailInfo = {
             }
         }
         var swiper2 = new Swiper('.mySwiper2', {
+            spaceBetween: 10,
             autoplay: {
               delay: 2000,
               disableOnInteraction: false
@@ -431,6 +498,7 @@ var DetailInfo = {
         $('.container').css({'visibility': 'visible'});
         $('table').show();
 
+        DetailInfo.showLikeIcon(response);
         DetailInfo.showMap(response);
         DetailInfo.showPlaceInfo(response);
         DetailInfo.showHighCharts(response);
@@ -440,7 +508,7 @@ var DetailInfo = {
     redrawLineCharts: function(){
         var width = $('#line-chart-container').css('width');
         // $('#line-chart-container').css('width', '680px');
-        $('#line-chart-container').css('width', '43rem');
+        // $('#line-chart-container').css('width', '33rem');
     }
 }
 DetailInfo.getPlaceInfo();

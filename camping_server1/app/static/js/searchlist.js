@@ -5,7 +5,6 @@ var params = {
     keywords : ''
 }
 var total_row = 0;
-
 var Pagination = {
     // 페이지 수 처리
     pageList: function(row_nums){
@@ -29,6 +28,14 @@ var Pagination = {
                 // 다음 페이지 클릭 처리
                 $.getJSON('/search/pagination/list/' + row_nums + '/' + page, params).done(function(response){
                     if(response.code === 200){
+                        var regex = / /gi;
+                        var keyword_arrs = params.keywords.replace(regex, '').trim().split(';');
+                        $('.bootstrap-tagsinput').empty();
+
+                        for (var i=2; i<keyword_arrs.length; i++){
+                            var span_tag = '<span class="badge badge-info">' + keyword_arrs[i] + '</span>'
+                            $('.bootstrap-tagsinput').append(span_tag);
+                        }
                         SearchList.getSearchData(response, row_nums);
                     }else{
                         alert(response.code);
@@ -37,25 +44,39 @@ var Pagination = {
                 // 인기순
                 $('#btnradio-popular').click(function() {
                     $.getJSON('/search/pagination/popular/' + row_nums + '/' + page, params).done(function (response) {
-                        if (response.code === 200) {
+                        if (response.code === 200){
+                            var regex = / /gi;
+                            var keyword_arrs = params.keywords.replace(regex, '').trim().split(';');
+                            $('.bootstrap-tagsinput').empty();
+
+                            for (var i=2; i<keyword_arrs.length; i++){
+                                var span_tag = '<span class="badge badge-info">' + keyword_arrs[i] + '</span>'
+                                $('.bootstrap-tagsinput').append(span_tag);
+                            }
                             SearchList.getSearchData(response, row_nums);
-                        } else {
+                        }else{
                             alert(response.code);
                         }
                     });
                 })
-
                 // 등록순
                 $('#btnradio-update').click(function() {
                     $.getJSON('/search/pagination/recent/' + row_nums + '/' + page, params).done(function (response) {
                         if(response.code === 200){
+                            var regex = / /gi;
+                            var keyword_arrs = params.keywords.replace(regex, '').trim().split(';');
+                            $('.bootstrap-tagsinput').empty();
+
+                            for (var i=2; i<keyword_arrs.length; i++){
+                                var span_tag = '<span class="badge badge-info">' + keyword_arrs[i] + '</span>'
+                                $('.bootstrap-tagsinput').append(span_tag);
+                            }
                             SearchList.getSearchData(response);
                         }else{
                             alert(response.code);
                         }
                     })
                 })
-
                 // 조회순
                 $('#btnradio-readcount').click(function() {
                     $.getJSON('/search/pagination/readcount/' + row_nums + '/' + page, params).done(function(response){
@@ -78,6 +99,15 @@ var SearchList = {
         $('#btnradio-popular').click(function() {
             $.getJSON('/search/pagination/popular/' + total_row + '/' + 1, params).done(function(response){
                 if(response.code === 200){
+                    var regex = / /gi;
+                    var keyword_arrs = params.keywords.replace(regex, '').trim().split(';');
+                    var keyword_str = '';
+                    $('.bootstrap-tagsinput').empty();
+
+                    for (var i=2; i<keyword_arrs.length; i++){
+                        var span_tag = '<span class="badge badge-info">' + keyword_arrs[i] + '</span>'
+                        $('.bootstrap-tagsinput').append(span_tag);
+                    }
                     SearchList.getSearchData(response);
                 }else{
                     alert(response.code);
@@ -85,8 +115,17 @@ var SearchList = {
         });
         // 등록순
         $('#btnradio-update').click(function() {
+                // $('.input-keyword').text(params.keywords + '에 대한');
                 $.getJSON('/search/pagination/recent/' + total_row + '/' + 1, params).done(function (response) {
                     if(response.code === 200){
+                        var regex = / /gi;
+                        var keyword_arrs = params.keywords.replace(regex, '').trim().split(';');
+                        $('.bootstrap-tagsinput').empty();
+
+                        for (var i=2; i<keyword_arrs.length; i++){
+                            var span_tag = '<span class="badge badge-info">' + keyword_arrs[i] + '</span>'
+                            $('.bootstrap-tagsinput').append(span_tag);
+                        }
                         SearchList.getSearchData(response);
                     }else{
                         alert(response.code);
@@ -96,8 +135,17 @@ var SearchList = {
         });
         // 조회순
         $('#btnradio-readcount').click(function() {
+            // $('.input-keyword').text(params.keywords + '에 대한');
             $.getJSON('/search/pagination/readcount/' + total_row + '/' + 1, params).done(function(response){
                 if(response.code === 200){
+                    var regex = / /gi;
+                    var keyword_arrs = params.keywords.replace(regex, '').trim().split(';');
+                    $('.bootstrap-tagsinput').empty();
+
+                    for (var i=2; i<keyword_arrs.length; i++){
+                        var span_tag = '<span class="badge badge-info">' + keyword_arrs[i] + '</span>'
+                        $('.bootstrap-tagsinput').append(span_tag);
+                    }
                     SearchList.getSearchData(response);
                 }else{
                     alert(response.code);
@@ -116,8 +164,20 @@ var SearchList = {
 
         $.getJSON('/search/list', params).done(function(response){
             if(response.code === 200){
+                $('.input-keyword').text(params.keywords + '에 대한');
                 var row_nums = response.row_nums;
                 total_row = row_nums;
+
+                var regex = / /gi;
+                var keyword_arrs = req_param.replace(regex, '').trim().split(';');
+
+                $('#area-default-menu').text(keyword_arrs[1]);
+                $('.bootstrap-tagsinput').empty();
+
+                for (var i=2; i<keyword_arrs.length; i++){
+                    var span_tag = '<span class="badge badge-info">' + keyword_arrs[i] + '</span>'
+                    $('.bootstrap-tagsinput').append(span_tag);
+                }
 
                 $.getJSON('/search/pagination/list/' + response.row_nums + '/' + 1, params).done(function(response){
                     if(response.code === 200){
@@ -130,7 +190,6 @@ var SearchList = {
                 alert(response.code);
             }
         })
-
     },
     showAlgoStars: function(res){
         var star = '';
@@ -150,16 +209,27 @@ var SearchList = {
         }
     },
     showSearchList: function(res, row_nums){
-        var rtn_keywords = '';
-        rtn_keywords = res.keywords;
-
         try{
             $('#area-default-menu').text(rtn_keywords.substr(0, 2));
             $("#area-default-menu").val(rtn_keywords.substr(0, 2));
         } catch(err){
 
         }
-        $('.input-keyword').text(rtn_keywords);
+        var regex = / /gi;
+        var keyword_arrs = params.keywords.replace(regex, '').trim().split(';');
+        var keyword_str = '';
+
+        keyword_str += keyword_arrs[1].trim() + ', ';
+
+        for (var i=2; i<keyword_arrs.length; i++){
+            keyword_str += keyword_arrs[i].trim();
+
+            if (i !== keyword_arrs.length -1){
+                keyword_str += ', ';
+            }
+        }
+        $('.input-keyword').text(keyword_str + '에 대한');
+
         $('.input-size').text(row_nums);
         $('.search-result').css({'visibility': 'visible'});
         $('.pagination').css({'visibility': 'visible'});

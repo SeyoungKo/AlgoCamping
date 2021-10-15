@@ -1,5 +1,6 @@
 from app.main.service import detail as detail_service
 from app.main.service import main as main_service
+from app.main.service import user as user_service
 from flask_restx import Resource, Namespace, fields
 from flask import request
 
@@ -60,7 +61,6 @@ place_model = detail.model('Specific Place Model',
                                                        description='user name')})
 
 @detail.route('/info')
-@detail.doc(params={'content_id': '캠핑장별 고유 content id'})
 @detail.doc(responses={302: 'redirect'})
 @detail.response(200, 'Success', place_model)
 class DetailAll(Resource):
