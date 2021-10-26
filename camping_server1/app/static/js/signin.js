@@ -21,6 +21,10 @@ var SigninEvent = {
             if (param.email !== '' && param.password !== ''){
                 $.post('/user/signin', param).done(function(response){
                     if (response.code === 200){
+                        if (response.member === 0){
+                            alert('탈퇴한 회원입니다.');
+                            return;
+                        }
                         if (response.error_msg !== ''){
                             alert(response.error_msg);
                         }else{
@@ -31,14 +35,14 @@ var SigninEvent = {
                             // 토큰 유효성 체크
                             $.post('/user/validation', param).done(function(response){
                                 if(response.code === 200){
-                                    var url = '/';
+                                    var url = '/main';
                                     location.href = url;
                                 }else{
                                     console.log(response.code);
                                 }
                             })
                         }
-                    }else{
+                    }else{ㅡ
                         alert(response.code + '다시 시도해주세요.');
                     }
                 })
@@ -47,48 +51,7 @@ var SigninEvent = {
     },
     kakaoSignIn: function(){
         $('.btn-kakao').on('click', function(){
-            Kakao.Auth.login({
-                success: function(response){
-                    Kakao.API.request({
-                        url: '/v2/user/me',
-                        success: function(response){
-                            if (response.properties !== undefined){
-                                var param = {
-                                    id: response.id,
-                                    name: response.properties.nickname,
-                                    email: response.email,
-                                    profile_image: response.properties.thumbnail_image
-                                }
-                                if (param.kakao_account === undefined || typeof param.kakao_account === 'undefined'){
-                                    alert('이메일은 필수정보입니다. 정보제공을 동의해주세요.');
-                                    Kakao.Auth.login({
-                                        scope: 'account_email',
-                                        success: function(response){
-                                            param.email = response.email;
-                                            $.post('/user/sns/signin', param).done(function(response){
-                                                if (response.code === 200){
-                                                    location.href = '/';
-                                                }
-                                            })
-                                        },
-                                        fail: function(error){
-                                            console.log(error);
-                                        }
-                                    })
-                                }
-                            }else{
-                                alert('다시 시도해주세요.');
-                            }
-                        },
-                        fail: function(error){
-                            console.log(error);
-                        }
-                    })
-                },
-                fail: function(error){
-                    console.log(error);
-                }
-            })
+            location.href = '/auth/kakao';
         })
     },
     NaverSignin: function(){

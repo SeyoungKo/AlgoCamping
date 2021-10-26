@@ -1,5 +1,7 @@
 const MAX_TAG = 3;
 const LIMIT_RANGE = 16;
+// header logo img 경로
+$('.header-logo-img').attr('src', '/static/imgs/algo_logo2.png');
 
 var params = {
     keywords : ''
@@ -91,8 +93,80 @@ var Pagination = {
         });
     }
 }
-
 var SearchList = {
+    // 배너 클릭 검색 결과 (매칭도, 롤링 썸네일, 정렬 미지원)
+    bannerList: function(){
+        // 배너 검색 결과 여부 확인
+        if (window.location.pathname.split('/')[1] === 'search' && window.location.pathname.split('/')[2] === 'banner'){
+            var param = {
+                scene_no: window.location.pathname.split('/')[3]
+            }
+            $.getJSON('/search/banner/list', param).done(function(response){
+                if (response.code === 200){
+                    $('.loading-bar').css({'visibility': 'hidden'});
+                    $('.sort').css({'display': 'none'});
+
+                    $('.input-keyword').text(response.copy + '에 대한');
+                    $('.input-size').text(response.algostar.length);
+                    $('.input-size').text(response.algostar.length);
+                    $('.search-result').css({'visibility': 'visible'});
+                    $('.pagination').css({'visibility': 'visible'});
+
+                    for(var i=0; i<response.algostar.length; i++){
+                        $('#card-layout').append(
+                            '<div class="col" style="cursor: pointer;" name="' + response.place_info[i].content_id + '" id=' + '"' + i + '"' + '>\n' +
+                                '<div class="card border-0" id="' + response.place_info[i].content_id + '" >\n' +
+                                    '<div class="swiper-container card mySwiper">\n' +
+                                        '<div class="swiper-wrapper" id="swiper'+ (i+1) + '">\n' +
+                                            '<div class="swiper-slide">\n' +
+                                                '<img class="lazy-load card-img-fluid" alt="..." src="' + response.place_info[i].first_image + '" onError="this.onerror=null;this.src=\'/static/imgs/error_logo.png\';"' +'>\n' +
+                                            '</div>\n' +
+                                        '</div>\n' +
+                                    '</div>\n' +
+                                    '<div class="card-body">\n' +
+                                        '<div id="item-title' + (i+1) + '">\n'+
+                                            '<a class="h5 card-title fw-bolder" href="#">'+ response.place_info[i].place_name +'</a>\n' +
+                                        '</div><br>\n' +
+                                        '<div class="col justify-content-md-center tags" id="tag' + (i+1) + '">\n' +
+                                        '</div>&nbsp;\n' +
+                                        '<p class="algo-text">\n' +
+                                            '<span class="star" id="algo-star' + (i+1) + '"></span> \n' +
+                                        '</p> \n' +
+                                    '</div> \n' +
+                                '</div> \n' +
+                                '<br><br> \n' +
+                            '</div> \n'
+                        );
+                    }
+                    var star = '';
+                    for (var i=0; i<response.algostar.length; i++){
+                        for (var j=0; j<parseInt(response.algostar[i]); j++){
+                            star += '★';
+                        }
+                        for (var j=0; j<(5 - parseInt(response.algostar[i])); j++){
+                            star += '☆';
+                        }
+                        $('#algo-star' + (i+1)).text(star);
+                        $('#algo-star' + (i+1)).append(
+                            '<span class="detail-score">' + ' ' + response.algostar[i] + '</span>'
+                        )
+                        star = '';
+                    }
+                    // 장소 클릭
+                    $('.col').each(function(idx){
+                        $(this).click(function(event){
+                            var idx = $(this).attr('id');
+                            var content_id = $(this).attr('name');
+
+                            location.href = '/detail/' + content_id + '/' + idx;
+                        })
+                    })
+                }else{
+                    alert('다시 시도해주세요');
+                }
+            })
+        }
+    },
     // 검색결과 정렬
     sortList: function(){
         // 인기순
@@ -104,6 +178,14 @@ var SearchList = {
                     var keyword_str = '';
                     $('.bootstrap-tagsinput').empty();
 
+                    // 로그인 o인 경우 매칭도 노출
+                    if (SearchList.getCookie('access_token') !== undefined){
+                        for (var i=0; i<response.place_info.length; i++){
+                            $('#item-title'+ (i+1)).append(
+                                '<p class="card-text">' + response.match_pct[i] + "\% 일치" + '</p>'
+                            )
+                        }
+                    }
                     for (var i=2; i<keyword_arrs.length; i++){
                         var span_tag = '<span class="badge badge-info">' + keyword_arrs[i] + '</span>'
                         $('.bootstrap-tagsinput').append(span_tag);
@@ -115,13 +197,20 @@ var SearchList = {
         });
         // 등록순
         $('#btnradio-update').click(function() {
-                // $('.input-keyword').text(params.keywords + '에 대한');
                 $.getJSON('/search/pagination/recent/' + total_row + '/' + 1, params).done(function (response) {
                     if(response.code === 200){
                         var regex = / /gi;
                         var keyword_arrs = params.keywords.replace(regex, '').trim().split(';');
                         $('.bootstrap-tagsinput').empty();
 
+                        // 로그인 o인 경우 매칭도 노출
+                        if (SearchList.getCookie('access_token') !== undefined){
+                            for (var i=0; i<response.place_info.length; i++){
+                                $('#item-title'+ (i+1)).append(
+                                    '<p class="card-text">' + response.match_pct[i] + "\% 일치" + '</p>'
+                                )
+                            }
+                        }
                         for (var i=2; i<keyword_arrs.length; i++){
                             var span_tag = '<span class="badge badge-info">' + keyword_arrs[i] + '</span>'
                             $('.bootstrap-tagsinput').append(span_tag);
@@ -135,13 +224,20 @@ var SearchList = {
         });
         // 조회순
         $('#btnradio-readcount').click(function() {
-            // $('.input-keyword').text(params.keywords + '에 대한');
             $.getJSON('/search/pagination/readcount/' + total_row + '/' + 1, params).done(function(response){
                 if(response.code === 200){
                     var regex = / /gi;
                     var keyword_arrs = params.keywords.replace(regex, '').trim().split(';');
                     $('.bootstrap-tagsinput').empty();
 
+                    // 로그인 o인 경우 매칭도 노출
+                    if (SearchList.getCookie('access_token') !== undefined) {
+                        for (var i = 0; i < response.place_info.length; i++) {
+                            $('#item-title' + (i + 1)).append(
+                                '<p class="card-text">' + response.match_pct[i] + "\% 일치" + '</p>'
+                            )
+                        }
+                    }
                     for (var i=2; i<keyword_arrs.length; i++){
                         var span_tag = '<span class="badge badge-info">' + keyword_arrs[i] + '</span>'
                         $('.bootstrap-tagsinput').append(span_tag);
@@ -181,6 +277,7 @@ var SearchList = {
 
                 $.getJSON('/search/pagination/list/' + response.row_nums + '/' + 1, params).done(function(response){
                     if(response.code === 200){
+                        console.log(response);
                         SearchList.getSearchData(response, row_nums);
                     }else{
                         alert(response.code);
@@ -230,6 +327,11 @@ var SearchList = {
         }
         $('.input-keyword').text(keyword_str + '에 대한');
 
+        if (res.flag === true){
+            console.log(res.algo_star.length);
+            $('.input-size').empty();
+            $('.input-size').text(res.algo_star.length);
+        }
         $('.input-size').text(row_nums);
         $('.search-result').css({'visibility': 'visible'});
         $('.pagination').css({'visibility': 'visible'});
@@ -279,7 +381,7 @@ var SearchList = {
         if (SearchList.getCookie('access_token') !== undefined){
             for (var i=0; i<res.place_info.length; i++){
                 $('#item-title'+ (i+1)).append(
-                    '<p class="card-text">95% 일치</p>'
+                    '<p class="card-text">' + res.match_pct[i] + "\% 일치" + '</p>'
                 )
             }
         }
@@ -345,5 +447,10 @@ var SearchList = {
         Pagination.pageList(row_nums);
     }
 }
-SearchList.sortList()
-SearchList.getList()
+
+if (window.location.pathname.split('/')[2] !== 'banner') {
+    SearchList.sortList()
+    SearchList.getList()
+}else{
+    SearchList.bannerList()
+}

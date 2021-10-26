@@ -2,7 +2,112 @@ var count = 0;
 var items = [];
 var tag_arrs = [];
 var maxTags = 3;
+const SWIPER_RECOMMEND = 5;
+const SWIPER_BANNER = 3;
+var x, y;
 
+var val = document.cookie.split(';');
+var param = {
+    access_token: ''
+};
+try{
+    for (var i = 0; i < val.length; i++) {
+        x = val[i].substr(0, val[i].indexOf('='));
+        y = val[i].substr(val[i].indexOf('=') + 1);
+        x = x.replace(/^\s+|\s+$/g, ''); // 앞과 뒤의 공백 제거하기
+        if (x == 'access_token') {
+          param.access_token = unescape(y); // unescape로 디코딩 후 값 리턴
+        }
+    }
+}catch (e){
+    param.access_token = ''
+}
+
+console.log(param.access_token);
+// $('.swiper2-card-1').each(function (){
+//     $(this).click(function(event){
+//         alert($(this).attr('class'));
+//     })
+// })
+//
+// $('#recommend-swiper-01x').click(function(){
+//     alert('clickkkk');
+// })
+// 새로고침
+if (performance.navigation.type == 1 && (param.access_token !== '' || param.access_token !== undefined)){
+        $.getJSON('/main/swiper/recommend/1', param).done(function(response){
+            if (response.code === 200){
+                // 비회원
+                if (param.access_token === undefined || param.access_token === 'undefined' || param.access_token === ''){
+                    $('.signin-hello-user').text(response.copy[0]);
+                    GetRecommendBanner.showRecommendBanner(response);
+                }else{
+                    // 회원
+                    $('.signin-hello-user').text(response.name + '님, ' + response.copy[0]);
+                    GetRecommendBanner.showRecommendBanner(response);
+                }
+            }
+        })
+
+}else{
+    // 새로고침 x
+    $.getJSON('/main/swiper/recommend/0', param).done(function(response){
+        if (response.code === 200){
+            // 비회원
+            if (param.access_token === undefined || param.access_token === 'undefined' || param.access_token === ''){
+                $('.signin-hello-user').text(response.copy[0]);
+                GetRecommendBanner.showRecommendBanner(response);
+            }else{
+                // 회원
+                $('.signin-hello-user').text(response.copy);
+                GetRecommendBanner.showRecommendBanner(response);
+            }
+        }
+    })
+}
+// 롤링 배너 클릭
+$('.img-1').click(function(){
+    var scene_no = $(this).attr('id');
+    location.href= '/search/banner/' + scene_no;
+})
+
+var GetRecommendBanner = {
+    showRecommendBanner: function(response){
+        for (var i=0; i<SWIPER_RECOMMEND; i++){
+            $('.swiper-wrapper2').append(
+                '<div class="swiper-slide mySwiper2-slide" id="recommend-swiper-01">\n' +
+                '   <div class="card swiper2-card-1">\n' +
+                '      <img class="swiper2-img" alt="..." src=' + response.first_image[i] + '>\n' +
+                '      <div class="card-body">\n' +
+                '         <h6>' + response.place_name[i] + '</h6>\n' +
+                '      </div>\n' +
+                '   </div>\n' +
+                '</div>'
+            );
+            swiper.update();
+        }
+    },
+    showSwiperBanner: function(){
+        $.getJSON('/main/swiper/banner').done(function(response){
+            if (response.code === 200){
+                for (var i=0; i<SWIPER_BANNER; i++){
+                    $('.swiper-wrapper1').append(
+                        '<div className="swiper-slide swiper-slide-1" id="banner-swiper-01">\n' +
+                            '<div className="col-7">\n' +
+                                '<img className="img-1" alt="img" src=' + response.first_image[i] + '>\n' +
+                            '</div>\n' +
+                            '<div className="col-5 promotion-1">\n' +
+                                '<p className="h4 fw-bolder text-white promotion-title-1">' + response.copy[i] + '</p>\n' +
+                            '</div>\n' +
+                        '</div>\n'
+                    );
+                }
+            }else{
+                alert('다시 시도해주세요.');
+            }
+        })
+    }
+}
 var MyPageEvent = {
     moveMyPage: function(){
         $('#mypage-btn').on('click', function() {
@@ -163,6 +268,7 @@ var SearchTags = {
 var ClickBannerEvent = {
     clickRecommendSwiper : function(){
         $('.mySwiper2-slide').on('click', function(){
+            alert('click..!');
             var click_id = $(this).attr('id');
             var access_token = SignoutEvent.getCookie('access_token');
             if (access_token === undefined){
@@ -172,7 +278,7 @@ var ClickBannerEvent = {
                 id : click_id,
                 access_token : access_token
             }
-            $.getJSON('/main/swiper', param).done(function(response){
+            $.getJSON('/main/swiper/list', param).done(function(response){
                 if(response.code === 200){
                     // 임시
                     location.href = '/signin';
@@ -204,6 +310,33 @@ var ClickBannerEvent = {
         })
     }
 }
+
+var swiper = new Swiper(".mySwiper2", {
+    slidesPerView: 5,
+    spaceBetween: 3,
+    pagination: {
+      el: ".swiper-pagination",
+      clickable: true,
+    },
+    breakpoints: {
+      // 320px ~
+      320: {
+        slidesPerView: 2,
+        spaceBetween: 20
+      },
+      // 480px ~
+      480: {
+        slidesPerView: 3,
+        spaceBetween: 20
+      },
+      // 640px ~
+      640: {
+        slidesPerView: 4,
+        spaceBetween: 0
+      }
+    }
+});
+
 MyPageEvent.moveMyPage();
 SignoutEvent.doSignout();
 SearchTags.getSearchTags();

@@ -5,6 +5,8 @@ var param = {
     status: 0
 }
 var like_list = [];
+// header logo img 경로
+$('.header-logo-img').attr('src', '/static/imgs/algo_logo2.png');
 
 $('#empty-like').click(function(){
     param.status = 1; // like
@@ -19,6 +21,7 @@ $('#empty-like').click(function(){
         }
     })
 })
+
 
 $('#nonempty-like').click(function(){
     param.status = 0 // dislike
@@ -40,6 +43,12 @@ $('#nonempty-like').click(function(){
 })
 
 var DetailInfo = {
+    IsSignin: function(){
+        if (DetailInfo.getCookie('access_token') === undefined){
+            $('#empty-like').css({'display': 'none'});
+            $('#nonempty-like').css({'display': 'none'});
+        }
+    },
     getPlaceInfo: function(){
         var p_content_id = document.location.href.split("/")[4].toString();
         var p_id = document.location.href.split("/")[5].toString();
@@ -51,6 +60,7 @@ var DetailInfo = {
 
         $.getJSON('/detail/info', param).done(function(response){
             if (response.code === 200){
+                param.content_id = response.place_info.content_id;
                 DetailInfo.doAfterSuccess(response);
             }else{
                 alert(response.code);
@@ -61,6 +71,7 @@ var DetailInfo = {
         var star = '';
         if (res.avg_star === 0){
             $('.visitor-text').css({'visibility': 'hidden'});
+            $('.visitoravg-info-btn').css({'display': 'none'});
         }
         $('.point').text(res.avg_star);
         $('#title').text(res.place_info.place_name);
@@ -93,7 +104,7 @@ var DetailInfo = {
         if (res.place_info.detail_image === null){
             $('#swiper-place').append(
                 '<div class="swiper-slide">\n' +
-                        '<img src="../imgs/test_img3.jpg" class="figure-img img-fluid rounded" onError="this.onerror=null;this.src=\'/static/imgs/algo_default.png\';" alt="...">\n' +
+                        '<img src="/static/imgs/test_img3.jpg" class="figure-img img-fluid rounded" onError="this.onerror=null;this.src=\'/static/imgs/algo_default.png\';" alt="...">\n' +
                 '</div>\n'
             )
         }else{
@@ -119,19 +130,22 @@ var DetailInfo = {
     },
     showLikeIcon: function(res){
 
-        if (res.like === 'None'){
+        if (res.like === 'None' || res.like === ''){
             $('#nonempty-like').css({'display': 'none'});
         }else{
-            var like = res.like.split(',');
-            for (var i=0; i<like.length; i++){
-                like_list.push(like[i]);
-            }
+            try{
+                var like = res.like.split(',');
+                for (var i=0; i<like.length; i++){
+                    like_list.push(like[i]);
+                }
+                // content_id가 포함되어 있는지 확인
+                if (like_list.includes(param.content_id.toString())){
+                    $('#empty-like').css({'display': 'none'});
+                }else{
+                    $('#nonempty-like').css({'display': 'none'});
+                }
+            }catch (e) {
 
-            // content_id가 포함되어 있는지 확인
-            if (like_list.includes(param.content_id.toString())){
-                $('#empty-like').css({'display': 'none'});
-            }else{
-                $('#nonempty-like').css({'display': 'none'});
             }
         }
     },
@@ -166,18 +180,16 @@ var DetailInfo = {
     },
     showHighCharts: function(res){
         var base = new Date();
-        var past = new Date(res.past_congestion[0].base_ymd);
 
         var basedate = base.getFullYear() + '-' + ('0'+(base.getMonth()+1)).slice(-2) + '-' + ('0' + base.getDate()).slice(-2);
-        var pastdate = past.getFullYear() + '-' + ('0'+(past.getMonth()+1)).slice(-2) + '-' + ('0' + past.getDate()).slice(-2);
-        var congestion = [];
+        var avg_congestion = [];
+        var sgg_congestion = [];
         var daterange = [];
 
-        for (var i=0; i<res.past_congestion.length; i++){
-            congestion.push(res.past_congestion[i].congestion);
-            var date = new Date(res.past_congestion[i].base_ymd);
-            var ymd_date = date.getFullYear() + '-' + ('0'+(date.getMonth()+1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2);
-            daterange.push(ymd_date);
+        for (var i=0; i<res.congestion_obj.base_ymd.length; i++){
+            sgg_congestion.push(res.congestion_obj.sgg_visitor[i]);
+            avg_congestion.push(res.congestion_obj.avg_visitor[i]);
+            daterange.push(res.congestion_obj.base_ymd[i].split(' ')[0]);
         }
 
         var tag = [];
@@ -205,9 +217,11 @@ var DetailInfo = {
 
             var title = res.place_info.place_name + '에 대한 분석결과입니다.';
             var subtitle = '로그인을 통해 내 캠핑장 선호도를 파악하고 나와 캠핑장 매칭도를 확인해보세요.';
+            var legend_name = '캠퍼';
         }else{
-            var title = res.user_name + '님과 95% 일치합니다.';
+            var title = res.user_name + '님과 ' + res.match_pct + '\% 일치합니다.';
             var subtitle = res.user_name + '님과 ' + res.place_info.place_name + '에 대한 분석결과입니다.';
+            var legend_name = res.user_name + '님';
         }
 
         // spider web (polar) chart
@@ -265,9 +279,10 @@ var DetailInfo = {
                 color: '#4f9f88'
             },
             {
-              name: '사용자',
-              data: [80, 90, 100, 100, 90],
-              pointPlacement: 'on'
+                name: legend_name,
+                data: res.user_point,
+                pointPlacement: 'on',
+                color: '#1b4785'
             }],
 
             responsive: {
@@ -300,11 +315,11 @@ var DetailInfo = {
           },
 
           title: {
-            text: res.place_info.place_name + '의 혼잡도'
+            text: res.place_info.place_name + '방문객 추이'
           },
 
           subtitle: {
-            text: pastdate + ' ~ '+ basedate + '기준'
+            text: daterange[0] + ' ~ '+ daterange[daterange.length -1] + '기준 방문객 수 추이'
           },
           plotOptions: {
             series: {
@@ -345,15 +360,16 @@ var DetailInfo = {
             }]
           },
           series: [{
-            name: '지난' + res.past_congestion.length + '일 간 방문객 수',
-            data: congestion,
+            name: res.place_info.place_name + '지역 방문객수',
+            data: sgg_congestion,
             color: '#4f9f88'
           }
           // , {
-          //   name: '지난 1주일 간 방문율',
-          //   data: [24916, 24064, 29742, 29851, 32490, 30282, 38121, 40434]
-          // }
-          ],
+          //   name: '전국 평균 방문객수',
+          //   data: avg_congestion,
+          //   color: '#1b4785'
+          // }],
+              ],
 
           responsive: {
             rules: [{
@@ -443,7 +459,7 @@ var DetailInfo = {
         );
         // 사용자 이름 노출
         if(DetailInfo.getCookie('access_token') === undefined){
-            user = '사용자';
+            user = '캠퍼';
         }else{
             user = res.user_name;
         }
@@ -513,3 +529,4 @@ var DetailInfo = {
 }
 DetailInfo.getPlaceInfo();
 DetailInfo.redrawLineCharts();
+DetailInfo.IsSignin();
