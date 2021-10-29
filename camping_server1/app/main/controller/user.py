@@ -2,7 +2,7 @@ from app.main.service import user as user_service
 from app.main.util.user_dto import UserDTO as user_dto
 from app.main.service import main as main_service
 from flask_restx import Resource, Namespace, fields
-from flask import jsonify, request, session, redirect
+from flask import jsonify, request, session, redirect, make_response
 from flask import Blueprint
 import requests
 from app.config import Config
@@ -57,7 +57,7 @@ class UserValidation(Resource):
                 param = user_dto.user
                 user_service.delete_token(session['access_token'])
             except:
-                user_service.delete_token(session['access_token'])
+                pass
 
         return param
 
@@ -84,7 +84,7 @@ class UserSignup(Resource):
     @user.expect(user_model)
     def post(self):
         """회원가입"""
-        values = dict(request.values)
+        param = dict(request.values)
         return user_service.signup(param['email'], param['password'], param['name'], param['nickname'],
                                    param['birthDate'])
 
@@ -190,10 +190,6 @@ class UserSNSSignin(Resource):
         session['name'] = name
         session['platform'] = platform
         session['id'] = id
-
-        print(session['name'])
-        print(session['id'])
-
         return jsonify({'code': 200})
 
 
@@ -239,8 +235,14 @@ def signout():
 
     main_service.user_event_logging(headers, base_url, screen, method, action, type, keyword)
     user_service.delete_token(session['access_token'])
+    user_service.delete_token(session['name'])
 
-    return redirect(request.host_url, code=302)
+    response = make_response(redirect(request.host_url))
+    try:
+        response.delete_cookie('access_token')
+    except:
+        pass
+    return response
 
 
 @auth.route('/sns/signout')
@@ -249,6 +251,8 @@ def sns_signout():
     # getter
     param = user_dto.user
     user_service.delete_token(session['access_token'])
+    user_service.delete_token(session['name'])
+
     return redirect(request.host_url, code=302)
 
 

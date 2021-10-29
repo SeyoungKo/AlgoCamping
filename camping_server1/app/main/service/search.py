@@ -3,6 +3,7 @@ from app.main.model.search_dao import SearchDAO as model_search
 from app.main.model.algopoint_dao import AlgoPointDAO as model_algopoint
 from app.main.model.user_dao import UserDAO as model_user
 from app.main.model.scenario_dao import ScenarioDAO as model_scenario
+from app.main.model.algotag_dao import AlgoTagDAO as model_algotag
 from app.main.model import *
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.expression import func
@@ -15,6 +16,7 @@ import pandas as pd
 import logging
 from app.main.service.user_points import PolarArea
 from ..model.connect import Query
+# from ..service.detail import get_bubble_size
 
 # 검색결과 리스트
 def get_tag_searchlist(params, res_len, page):
@@ -105,8 +107,7 @@ def get_tag_searchlist(params, res_len, page):
     params['algo_star'] = algo_stars
     params['algo_score'] = algo_scores
     params['tag'] = tags
-    if match_pct is not False:
-        params['match_pct'] = match_pct
+    params['match_pct'] = match_pct # 유저 설문 응답이 없을 경우 False
 
     return params
 
@@ -185,8 +186,10 @@ def get_row_nums(params):
 
     res_param = dict()
     res_param['code'] = 200
-    res_param['row_nums'] = int(main_query[0][0])
-
+    if place_keyword == '' and area != '' and len(category_keyword) == 0:
+        res_param['row_nums'] = 16
+    else:
+        res_param['row_nums'] = int(main_query[0][0])
     return jsonify(res_param)
 
 # 유저-캠핑장 매칭도
@@ -198,6 +201,7 @@ def get_matching_rate(content_id):
             client = create_engine(DBConfig.SQLALCHEMY_DATABASE_URI)
             Session = sessionmaker(bind=client)
             session_ = Session()
+            # 전체 검색 결과 리스트 content_id
             if type(content_id) == list:
                 for id in content_id:
                     try:
@@ -212,9 +216,14 @@ def get_matching_rate(content_id):
                         userpoint_query = session_.query(model_user.comfort, model_user.together,
                                                          model_user.fun, model_user.healing, model_user.clean).filter(model_user.access_token == session['access_token']).all()
 
-                        if len(algopoint_query) == 0 or len(userpoint_query) == 0:
-                            param['code'] = 500
-                            return param
+                        if len(algopoint_query) == 0:
+                            return False
+
+                        # 유저 응답이 없을 경우
+                        if userpoint_query[0].comfort == 0 and userpoint_query[0].together == 0 and userpoint_query[0].fun == 0 and \
+                                userpoint_query[0].healing == 0 and userpoint_query[0].clean == 0:
+                            return False
+
                         else:
                             userpoint_list = [userpoint_query[0].comfort, userpoint_query[0].together, userpoint_query[0].fun,
                                               userpoint_query[0].healing, userpoint_query[0].clean]
@@ -229,6 +238,7 @@ def get_matching_rate(content_id):
                     finally:
                         session_.close()
                 return match_result
+            # 특정 장소 content_id
             else:
                 try:
                     '''
@@ -246,8 +256,13 @@ def get_matching_rate(content_id):
                         model_user.access_token == session['access_token']).all()
 
                     if len(algopoint_query) == 0 or len(userpoint_query) == 0:
-                        param['code'] = 500
-                        return param
+                        return False
+
+                    # 유저 응답이 없을 경우
+                    if userpoint_query[0].comfort == 0 and userpoint_query[0].together == 0 and userpoint_query[0].fun == 0 and \
+                            userpoint_query[0].healing == 0 and userpoint_query[0].clean == 0:
+                        return False, False
+
                     else:
                         userpoint_list = [userpoint_query[0].comfort, userpoint_query[0].together,
                                           userpoint_query[0].fun,
@@ -260,11 +275,12 @@ def get_matching_rate(content_id):
                         match_pct = pa.matching_pct(algopoint_list, userpoint_list)
                 except:
                     match_pct = 0
+                    return match_pct, [0, 0, 0, 0, 0]
                 finally:
                     session_.close()
             return match_pct, userpoint_list
     except:
-        return False
+        return False if type(content_id) == list else False, False
 
 # 인기순 정렬
 def get_popular_list(place_obj, algo_obj, page):
@@ -288,13 +304,17 @@ def get_popular_list(place_obj, algo_obj, page):
         content_id_list.append(info[1]) # 인기순 정렬된 content_id 리스트
 
     match_pct = get_matching_rate(content_id_list) if get_matching_rate(content_id_list) else False
+    match_status = False
 
-    if match_pct is not False:
-        match_status = True # ok
-        for i, info in enumerate(place_info):
-            info.append(match_pct[i])
-    else:
-        match_status = False # no
+    if type(match_pct) != tuple:
+        if match_pct is not False:
+            match_status = True # ok
+
+            for i, info in enumerate(place_info):
+                info.append(match_pct[i])
+        else:
+            match_status = False # no
+
     return jsonify(make_resobj(place_info, page, match_status))
  
 # 조회순 정렬
@@ -317,13 +337,17 @@ def get_readcount_list(place_obj, algo_obj, page):
         content_id_list.append(info[1]) # 조회순 정렬된 content_id 리스트
 
     match_pct = get_matching_rate(content_id_list) if get_matching_rate(content_id_list) else False
+    match_status = False
 
-    if match_pct is not False:
-        match_status = True  # ok
-        for i, info in enumerate(place_info):
-            info.append(match_pct[i])
-    else:
-        match_status = False  # no
+    if type(match_pct) != tuple:
+        if match_pct is not False:
+            match_status = True # ok
+
+            for i, info in enumerate(place_info):
+                info.append(match_pct[i])
+        else:
+            match_status = False # no
+
     return jsonify(make_resobj(place_info, page, match_status))
 
 # 등록순 정렬
@@ -351,45 +375,76 @@ def get_modified_list(place_obj, algo_obj, page):
         content_id_list.append(info[1]) # 조회순 정렬된 content_id 리스트
 
     match_pct = get_matching_rate(content_id_list) if get_matching_rate(content_id_list) else False
+    match_status = False
 
-    if match_pct is not False:
-        match_status = True  # ok
-        for i, info in enumerate(place_info):
-            info.append(match_pct[i])
-    else:
-        match_status = False  # no
+    if type(match_pct) != tuple:
+        if match_pct is not False:
+            match_status = True # ok
+
+            for i, info in enumerate(place_info):
+                info.append(match_pct[i])
+        else:
+            match_status = False # no
+
     return jsonify(make_resobj(place_info, page, match_status))
 
-# 알고 점수 호출
+# 알고 점수, 알고 별점 호출
 def get_score(content_id):
-    algostars, algoscores = [], []
-
-    if type(content_id) == list:
-        for target_id in content_id:
-            star, score = get_algo_points(target_id)
-            algostars.append(star)
-            algoscores.append(score)
-        return algostars, algoscores
-    else:
-        return get_algo_points(content_id)
-
-# 알고 별점, 알고 점수 계산
-def get_algo_points(content_id):
-    algo_df = pd.read_csv(Config.ALGO_POINTS)
+    Session = sessionmaker(bind=client)
+    session_ = Session()
     try:
-        algo_df.set_index(['contentId', 'camp'], inplace=True)
-        comfort_point = float(algo_df.loc[content_id]['comfort'])
-        together_point = float(algo_df.loc[content_id]['together'])
-        fun_point = float(algo_df.loc[content_id]['fun'])
-        healing_point = float(algo_df.loc[content_id]['healing'])
-        clean_point = float(algo_df.loc[content_id]['clean'])
+        if type(content_id) == list:
+            algostars, algoscores = [], []
 
-        cat_points_list = [comfort_point, together_point, fun_point, healing_point, clean_point]
-        algo_star = round(sum(cat_points_list) / 100, 1)
+            '''
+            # SELECT comfort, together, fun, healing, clean, algostar FROM algopoint WHERE content_id = 'content id' UNION ALL..;
+            '''
+            union_all_query = [session_.query(model_algopoint.comfort, model_algopoint.together, model_algopoint.fun, model_algopoint.healing,
+                                              model_algopoint.clean, model_algopoint.algostar).filter(model_algopoint.content_id == target_id) for target_id in content_id]
+            query = union_all_query[0].union_all(*union_all_query).all()
+
+            for q in query:
+                algostars.append(q.algostar)
+                algoscores.append([q.comfort, q.together, q.fun, q.healing, q.clean])
+
+            return algostars, algoscores
+        else:
+            algostars, algoscores = 0, []
+            '''
+            # SELECT comfort, together, fun, healing, clean, algostar FROM algopoint WHERE content_id = 'content id';
+            '''
+            query = session_.query(model_algopoint.comfort, model_algopoint.together, model_algopoint.fun, model_algopoint.healing,
+                           model_algopoint.clean, model_algopoint.algostar).filter(model_algopoint.content_id == content_id).all()
+            for q in query:
+                algostars = q.algostar
+                algoscores = [q.comfort, q.together, q.fun, q.healing, q.clean]
+            return algostars, algoscores
     except:
         # content_id에 대한 별점, 점수 산출 불가인 경우
         return 0.0, []
-    return algo_star, cat_points_list
+    finally:
+        session_.close()
+
+# 버블 차트 크기
+def get_bubble_size(content_id, top5_tag):
+    Session = sessionmaker(bind=client)
+    session_ = Session()
+    bubble_size = list()
+    try:
+        '''
+        # SELECT point FROM algotag WHERE content_id= [content_id] AND tag= [top5_tag1] UNION ALL ...
+        '''
+        union_all_query = [session_.query(model_algotag.point).filter(and_(model_algotag.content_id == content_id,
+                                                                     model_algotag.tag == tag)) for tag in top5_tag]
+        query = union_all_query[0].union_all(*union_all_query).all()
+
+        for q in query:
+            bubble_size.append(q.point)
+    except:
+        pass
+    finally:
+        session_.close()
+    return bubble_size
 
 # top3,5 특성
 def get_top_tag(content_id, num):
@@ -402,7 +457,9 @@ def get_top_tag(content_id, num):
             tags.append(top3_tag)
         return tags
     else:
-        return tag.tag_priority(content_id, rank=num)
+        top5_tag = tag.tag_priority(content_id, rank=num)
+        bubble_size = get_bubble_size(content_id, top5_tag)
+        return top5_tag, bubble_size
 
 # 반환되는 객체 만들기
 def make_resobj(place_info, page, match_status):
@@ -486,9 +543,10 @@ def get_bannerlist(param):
     session_ = Session()
 
     scenario_copy = {'s101': '아이들과 가기 좋은 캠핑장', 's102': '동해 근처 캠핑장', 's105': '투어하기 좋은 남해 근처 캠핑장',
-                     's108': '가을 정취 가득한 캠핑장', 's111': '반려동물과 함께해서 더 좋은 캠핑장', 's112': '제주 해수욕장 근처 인기 캠핑장',
+                     's107': '가을 정취 가득한 캠핑장', 's111': '반려동물과 함께해서 더 좋은 캠핑장', 's112': '제주 해수욕장 근처 인기 캠핑장',
                      's115': '가족들과 함께 하는 즐거운 오토 캠핑', 's119': '연인과 행복한 글램핑&카라반'}
 
+    res_param, place_info, algostar = dict(), list(), list()
     try:
         '''
         # SELECT copy, content_id FROM scenario WHERE spot2=1 AND scene_no = param['scene_no'];
@@ -514,7 +572,6 @@ def get_bannerlist(param):
 
         query = union_all_query[0].union_all(*union_all_query).all()
 
-        res_param, place_info, algostar = dict(), list(), list()
         for q in query:
             place_info.append(q[0])
             algostar.append(q[1].algostar)
@@ -529,34 +586,5 @@ def get_bannerlist(param):
         logging.error('----[' + str(datetime.datetime.now()) + ' get_bannerlist() : 500]----')
     finally:
         session_.close()
-    return jsonify(res_param)
 
-# # content_id에 대한 place info
-# def get_searchlist(content_id, copy=None):
-#     client = create_engine(DBConfig.SQLALCHEMY_DATABASE_URI)
-#     Session = sessionmaker(bind=client)
-#     session_ = Session()
-#     param = dict()
-#     try:
-#         '''
-#         # SELECT place_name, first_image FROM place WHERE place_num = 0 and content_id = param['content_id'];
-#         '''
-#         place_query = session_.query(model_place.place_name, model_place.first_image).filter(
-#             and_(model_place.place_num == 0, model_place.content_id == content_id)
-#         ).all()
-#
-#         param['place_name'] = place_query[0].place_name
-#         param['first_image'] = place_query[0].first_image
-#         param['algo_star'], _ = get_score(content_id)
-#         param['content_id'] = content_id
-#
-#         if copy is not None:
-#             param['copy'] = copy
-#         param['code'] = 200
-#
-#         logging.info('----[' + str(datetime.datetime.now()) + ' get_searchlist() : 200]----')
-#     except:
-#         logging.error('----[' + str(datetime.now()) + ' get_searchlist() : 500]----')
-#     finally:
-#         session_.close()
-#     return param
+    return jsonify(res_param)

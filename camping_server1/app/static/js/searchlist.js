@@ -7,6 +7,7 @@ var params = {
     keywords : ''
 }
 var total_row = 0;
+var match_flag = true;
 var Pagination = {
     // 페이지 수 처리
     pageList: function(row_nums){
@@ -162,7 +163,7 @@ var SearchList = {
                         })
                     })
                 }else{
-                    alert('다시 시도해주세요');
+                    console.log(response);
                 }
             })
         }
@@ -179,7 +180,7 @@ var SearchList = {
                     $('.bootstrap-tagsinput').empty();
 
                     // 로그인 o인 경우 매칭도 노출
-                    if (SearchList.getCookie('access_token') !== undefined){
+                    if ((SearchList.getCookie('access_token') !== undefined) && (match_flag !== false)){
                         for (var i=0; i<response.place_info.length; i++){
                             $('#item-title'+ (i+1)).append(
                                 '<p class="card-text">' + response.match_pct[i] + "\% 일치" + '</p>'
@@ -204,7 +205,7 @@ var SearchList = {
                         $('.bootstrap-tagsinput').empty();
 
                         // 로그인 o인 경우 매칭도 노출
-                        if (SearchList.getCookie('access_token') !== undefined){
+                        if ((SearchList.getCookie('access_token') !== undefined) && (match_flag !== false)){
                             for (var i=0; i<response.place_info.length; i++){
                                 $('#item-title'+ (i+1)).append(
                                     '<p class="card-text">' + response.match_pct[i] + "\% 일치" + '</p>'
@@ -231,7 +232,7 @@ var SearchList = {
                     $('.bootstrap-tagsinput').empty();
 
                     // 로그인 o인 경우 매칭도 노출
-                    if (SearchList.getCookie('access_token') !== undefined) {
+                    if ((SearchList.getCookie('access_token') !== undefined) && (match_flag !== false)){
                         for (var i = 0; i < response.place_info.length; i++) {
                             $('#item-title' + (i + 1)).append(
                                 '<p class="card-text">' + response.match_pct[i] + "\% 일치" + '</p>'
@@ -277,7 +278,6 @@ var SearchList = {
 
                 $.getJSON('/search/pagination/list/' + response.row_nums + '/' + 1, params).done(function(response){
                     if(response.code === 200){
-                        console.log(response);
                         SearchList.getSearchData(response, row_nums);
                     }else{
                         alert(response.code);
@@ -328,7 +328,6 @@ var SearchList = {
         $('.input-keyword').text(keyword_str + '에 대한');
 
         if (res.flag === true){
-            console.log(res.algo_star.length);
             $('.input-size').empty();
             $('.input-size').text(res.algo_star.length);
         }
@@ -378,13 +377,20 @@ var SearchList = {
             }
         }
         // 로그인 o인 경우 매칭도 노출
-        if (SearchList.getCookie('access_token') !== undefined){
-            for (var i=0; i<res.place_info.length; i++){
-                $('#item-title'+ (i+1)).append(
-                    '<p class="card-text">' + res.match_pct[i] + "\% 일치" + '</p>'
-                )
+        try{
+            if ((SearchList.getCookie('access_token') !== undefined) && (res.match_pct !== false)){
+                for (var i=0; i<res.place_info.length; i++){
+                    $('#item-title'+ (i+1)).append(
+                        '<p class="card-text">' + res.match_pct[i] + "\% 일치" + '</p>'
+                    )
+                }
+            }else{
+                match_flag = false;
             }
+        }catch (e) {
+
         }
+
         // 장소 클릭
         $('.col').each(function(idx){
             $(this).click(function(event){
